@@ -1,0 +1,8 @@
+# Configuração básica do agent
+# O modelo pode ser passado via CLI; aqui é apenas um default opcional.
+default_model: claude-sonnet-4-6
+
+# Diretórios
+skills_dir: ./skills
+output_dir: ./output/raw
+logs_dir: ./logs

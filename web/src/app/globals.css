@@ -1,0 +1,160 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+:root {
+  --bg: #0c0e14;
+  --surface: #141720;
+  --surface-2: #1c202e;
+  --border: #252836;
+  --border-2: #343848;
+  --text: #f0f2f8;
+  --text-muted: #8b8fa8;
+  --text-subtle: #555a72;
+  --accent: #e83c3c;
+  --accent-hover: #c72f2f;
+  --accent-dim: rgba(232, 60, 60, 0.12);
+  --accent-dim-2: rgba(232, 60, 60, 0.06);
+  --orange: #e05a1c;
+  --green: #22c55e;
+  --radius: 8px;
+}
+
+html[data-theme="light"] {
+  --bg: #f7f8fc;
+  --surface: #ffffff;
+  --surface-2: #eef0f6;
+  --border: #e0e3ed;
+  --border-2: #ccd0df;
+  --text: #0c0e14;
+  --text-muted: #454960;
+  --text-subtle: #8b8fa8;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --font-display: 'DM Serif Display', Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-subtle);
+}
+
+/* Selection */
+::selection {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* Typography plugin overrides for dark theme */
+.prose {
+  --tw-prose-body: var(--text);
+  --tw-prose-headings: var(--text);
+  --tw-prose-lead: var(--text-muted);
+  --tw-prose-links: var(--accent);
+  --tw-prose-bold: var(--text);
+  --tw-prose-counters: var(--text-muted);
+  --tw-prose-bullets: var(--accent);
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--text-muted);
+  --tw-prose-quote-borders: var(--accent);
+  --tw-prose-captions: var(--text-subtle);
+  --tw-prose-code: var(--accent);
+  --tw-prose-pre-code: var(--text);
+  --tw-prose-pre-bg: var(--surface-2);
+  --tw-prose-th-borders: var(--border-2);
+  --tw-prose-td-borders: var(--border);
+}
+
+.prose code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85em;
+  background: var(--surface-2);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+}
+
+.prose pre {
+  border: 1px solid var(--border);
+}
+
+/* Streaming output */
+.streaming-text {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.streaming-cursor::after {
+  content: '\25AE';
+  color: var(--accent);
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Card hover animation */
+.skill-card {
+  transition: border-color 200ms ease, background 200ms ease, transform 150ms ease;
+}
+.skill-card:hover {
+  transform: translateY(-2px);
+}
+.skill-card.selected {
+  border-color: var(--accent) !important;
+  background: var(--accent-dim-2) !important;
+}
+
+/* Input focus ring */
+textarea:focus,
+input:focus {
+  outline: none;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
+/* Button pulse animation on submit */
+@keyframes pulse-once {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+.btn-pulse:active {
+  animation: pulse-once 150ms ease;
+}
