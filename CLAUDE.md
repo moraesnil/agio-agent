@@ -4,11 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+## Regra Obrigatória — Memory
+
+**Ao final de toda sessão que envolver mudanças no projeto, atualizar obrigatoriamente:**
+
+- `C:\Users\Marketing\.claude\projects\C--Users-Marketing-Projects-Agents\memory\MEMORY.md`
+
+Incluir: novos arquivos, decisões tomadas, skills adicionadas, departamentos, estado atual. Fazer isso sem precisar ser solicitado.
+
+---
+
 ## Project Overview
 
 **Agio Agent** is a skills-based marketing automation platform for Agio Engenharia, consisting of:
 - A **Next.js 15 web app** (`/web`) — the primary interface used daily
 - A **Python CLI agent** (`/agent`) — early-stage, for batch automation tasks
+
+GitHub: https://github.com/moraesnil/agio-agent
 
 ---
 
@@ -79,7 +91,7 @@ Files in `web/src/context-docs/*.md` are automatically loaded and injected at th
 
 ### Design System
 
-CSS variables in `globals.css`. Dark theme is default; light theme activates via `[data-theme="light"]` on `<html>`.
+CSS variables in `globals.css`. Dark theme is default; light theme activates via `html[data-theme="light"]` on `<html>` (with `suppressHydrationWarning`).
 
 Accent color: `#e83c3c` (red from Agio logo)
 Toggle stored in localStorage key `agio-theme`.
