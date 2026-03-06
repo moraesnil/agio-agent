@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Ao final de toda sessão que envolver mudanças no projeto, atualizar obrigatoriamente:**
 
-- `C:\Users\Marketing\.claude\projects\C--Users-Marketing-Projects-Agents\memory\MEMORY.md`
+- `memory/MEMORY.md` (relativo à raiz do repositório — sincronizado via Git entre máquinas)
 
 Incluir: novos arquivos, decisões tomadas, skills adicionadas, departamentos, estado atual. Fazer isso sem precisar ser solicitado.
 
