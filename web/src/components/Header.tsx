@@ -38,7 +38,7 @@ export default function Header() {
         }}
       >
         <img
-          src="/logo.png"
+          src={theme === 'dark' ? '/logo-dark.png' : '/logo.png'}
           alt="Agio"
           style={{ height: '36px', width: 'auto' }}
         />
