@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Skill } from '@/lib/skills';
 import { useModel } from '@/lib/useModel';
-import SkillCard from './SkillCard';
+import SkillItem from './SkillCard';
 import TaskInput from './TaskInput';
 import StreamingOutput from './StreamingOutput';
 
@@ -13,31 +13,41 @@ interface SkillGridProps {
 
 export default function SkillGrid({ skills }: SkillGridProps) {
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('all');
+  const [openDept, setOpenDept] = useState<string | null>(null);
   const [task, setTask] = useState('');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [modelId] = useModel();
 
-  // Build ordered list of unique departments
-  const departments = Array.from(new Set(skills.map((s) => s.department).filter(Boolean)));
-  const showTabs = departments.length > 0;
+  // Build ordered departments with their skills
+  const deptMap = new Map<string, Skill[]>();
+  for (const skill of skills) {
+    const dept = skill.department || 'Geral';
+    if (!deptMap.has(dept)) deptMap.set(dept, []);
+    deptMap.get(dept)!.push(skill);
+  }
+  const departments = Array.from(deptMap.entries());
 
-  const filteredSkills =
-    activeTab === 'all' ? skills : skills.filter((s) => s.department === activeTab);
+  // Auto-open first department
+  if (openDept === null && departments.length > 0) {
+    // Use effect-free initialization via lazy check
+    const firstDept = departments[0][0];
+    if (openDept !== firstDept) {
+      // Will be set on first render
+      setTimeout(() => setOpenDept(firstDept), 0);
+    }
+  }
+
+  const selectedSkillData = skills.find((s) => s.name === selectedSkill);
 
   const handleSelect = (name: string) => {
     setSelectedSkill(name === selectedSkill ? null : name);
-    setOutput('');
-    setError('');
+    // Don't clear output on skill change — let user see previous result
   };
 
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    setSelectedSkill(null);
-    setOutput('');
-    setError('');
+  const handleDeptToggle = (dept: string) => {
+    setOpenDept(openDept === dept ? null : dept);
   };
 
   const handleSubmit = async () => {
@@ -76,11 +86,10 @@ export default function SkillGrid({ skills }: SkillGridProps) {
     }
   };
 
-  const selectedSkillData = skills.find((s) => s.name === selectedSkill);
+  const showOutput = output || loading || error;
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '36px 24px' }}>
-
       {/* Page heading */}
       <div style={{ marginBottom: '28px' }}>
         <h1
@@ -100,65 +109,249 @@ export default function SkillGrid({ skills }: SkillGridProps) {
         </p>
       </div>
 
-      {/* Department tabs */}
-      {showTabs && (
-        <div
-          style={{
-            display: 'flex',
-            gap: '6px',
-            marginBottom: '24px',
-            flexWrap: 'wrap',
-          }}
-        >
-          {departments.length > 1 && (
-            <TabButton
-              label="Todos"
-              count={skills.length}
-              active={activeTab === 'all'}
-              onClick={() => handleTabChange('all')}
-            />
-          )}
-          {departments.map((dept) => (
-            <TabButton
-              key={dept}
-              label={dept}
-              count={skills.filter((s) => s.department === dept).length}
-              active={activeTab === dept}
-              onClick={() => handleTabChange(dept)}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Separator line */}
+      {/* Main layout: Sidebar + Detail */}
       <div
         style={{
-          height: '1px',
-          background: 'var(--border)',
-          marginBottom: '24px',
-        }}
-      />
-
-      {/* Skills grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-          gap: '14px',
-          marginBottom: '36px',
+          display: 'flex',
+          gap: '1px',
+          marginBottom: '32px',
+          minHeight: '400px',
         }}
       >
-        {filteredSkills.map((skill) => (
-          <SkillCard
-            key={skill.name}
-            skill={skill}
-            selected={selectedSkill === skill.name}
-            onSelect={handleSelect}
-          />
-        ))}
+        {/* Sidebar */}
+        <div
+          style={{
+            width: '280px',
+            flexShrink: 0,
+            background: 'var(--surface)',
+            borderRadius: '12px 0 0 12px',
+            border: '1px solid var(--border)',
+            borderRight: 'none',
+            padding: '16px 12px',
+            overflowY: 'auto',
+            maxHeight: '520px',
+          }}
+        >
+          {departments.map(([dept, deptSkills]) => (
+            <div key={dept} style={{ marginBottom: '4px' }}>
+              {/* Department header (accordion toggle) */}
+              <button
+                onClick={() => handleDeptToggle(dept)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: openDept === dept ? 'rgba(232, 60, 60, 0.06)' : 'transparent',
+                  cursor: 'pointer',
+                  transition: 'background 150ms',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontFamily: 'IBM Plex Mono, monospace',
+                    fontWeight: 500,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: openDept === dept ? 'var(--accent)' : 'var(--text-muted)',
+                    transition: 'color 150ms',
+                  }}
+                >
+                  {dept}
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      fontFamily: 'IBM Plex Mono, monospace',
+                      color: 'var(--text-subtle)',
+                    }}
+                  >
+                    {deptSkills.length}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      color: openDept === dept ? 'var(--accent)' : 'var(--text-subtle)',
+                      transition: 'transform 150ms, color 150ms',
+                      transform: openDept === dept ? 'rotate(0deg)' : 'rotate(-90deg)',
+                      display: 'inline-block',
+                    }}
+                  >
+                    ▾
+                  </span>
+                </div>
+              </button>
+
+              {/* Skills list (shown when dept is open) */}
+              {openDept === dept && (
+                <div style={{ marginTop: '2px', marginBottom: '8px' }}>
+                  {deptSkills.map((skill) => (
+                    <SkillItem
+                      key={skill.name}
+                      skill={skill}
+                      selected={selectedSkill === skill.name}
+                      onSelect={handleSelect}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Detail / Output panel */}
+        <div
+          style={{
+            flex: 1,
+            background: 'var(--surface)',
+            borderRadius: '0 12px 12px 0',
+            border: '1px solid var(--border)',
+            borderLeft: '1px solid var(--border)',
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          {showOutput ? (
+            /* Streaming output replaces detail panel */
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <StreamingOutput output={output} loading={loading} error={error} />
+            </div>
+          ) : selectedSkillData ? (
+            /* Skill detail */
+            <div>
+              <div
+                style={{
+                  fontSize: '20px',
+                  fontFamily: 'var(--font-display)',
+                  color: 'var(--accent)',
+                  marginBottom: '6px',
+                }}
+              >
+                {selectedSkillData.name
+                  .split('-')
+                  .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                  .join(' ')}
+              </div>
+              <div
+                style={{
+                  fontSize: '11px',
+                  fontFamily: 'IBM Plex Mono, monospace',
+                  color: 'var(--text-subtle)',
+                  marginBottom: '16px',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                v{String(selectedSkillData.metadata?.version || '0.1.0')} · {selectedSkillData.department}
+              </div>
+              <p
+                style={{
+                  fontSize: '14px',
+                  color: 'var(--text-muted)',
+                  lineHeight: 1.65,
+                  margin: '0 0 20px 0',
+                }}
+              >
+                {selectedSkillData.description}
+              </p>
+
+              {/* Sections preview */}
+              <div
+                style={{
+                  borderTop: '1px solid var(--border)',
+                  paddingTop: '16px',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '10px',
+                    fontFamily: 'IBM Plex Mono, monospace',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: 'var(--text-subtle)',
+                    marginBottom: '8px',
+                  }}
+                >
+                  Seções
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {['Goal', 'Required Inputs', 'Workflow', 'Anti-patterns', 'Output Template', 'Quality Gate', 'Example'].map(
+                    (section) => (
+                      <span
+                        key={section}
+                        style={{
+                          fontSize: '11px',
+                          fontFamily: 'IBM Plex Mono, monospace',
+                          color: 'var(--text-muted)',
+                          background: 'var(--surface-2)',
+                          padding: '3px 10px',
+                          borderRadius: '4px',
+                          letterSpacing: '0.02em',
+                        }}
+                      >
+                        {section}
+                      </span>
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Empty state */
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
+              <div
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  border: '2px solid var(--border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path
+                    d="M10 4v12M4 10h12"
+                    stroke="var(--text-subtle)"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+              <p
+                style={{
+                  color: 'var(--text-subtle)',
+                  fontSize: '13px',
+                  textAlign: 'center',
+                  margin: 0,
+                }}
+              >
+                Selecione uma skill na sidebar
+                <br />
+                <span style={{ fontSize: '12px' }}>ou execute em modo geral</span>
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Active skill indicator + task input */}
+      {/* Task input — separate section below */}
       <div style={{ maxWidth: '760px' }}>
         {/* Skill context badge */}
         <div
@@ -203,62 +396,7 @@ export default function SkillGrid({ skills }: SkillGridProps) {
               : 'Descreva a tarefa em linguagem natural...'
           }
         />
-
-        {(output || loading || error) && (
-          <div style={{ marginTop: '24px' }}>
-            <StreamingOutput output={output} loading={loading} error={error} />
-          </div>
-        )}
       </div>
     </div>
-  );
-}
-
-function TabButton({
-  label,
-  count,
-  active,
-  onClick,
-}: {
-  label: string;
-  count: number;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '7px',
-        padding: '7px 16px',
-        borderRadius: '100px',
-        border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
-        background: active ? 'var(--accent)' : 'var(--surface)',
-        color: active ? '#fff' : 'var(--text-muted)',
-        fontSize: '13px',
-        fontWeight: 500,
-        fontFamily: 'DM Sans, sans-serif',
-        cursor: 'pointer',
-        transition: 'all 150ms ease',
-        letterSpacing: '0.01em',
-      }}
-    >
-      {label}
-      <span
-        style={{
-          fontSize: '10px',
-          fontFamily: 'IBM Plex Mono, monospace',
-          background: active ? 'rgba(255,255,255,0.2)' : 'var(--surface-2)',
-          color: active ? '#fff' : 'var(--text-subtle)',
-          padding: '1px 6px',
-          borderRadius: '100px',
-          letterSpacing: '0.02em',
-        }}
-      >
-        {count}
-      </span>
-    </button>
   );
 }
