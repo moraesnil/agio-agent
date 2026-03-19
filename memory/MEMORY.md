@@ -1,37 +1,55 @@
 # Agio Agent — Memory
 
 Arquivo de memória compartilhada entre máquinas via Git.
-Atualizar ao final de toda sessão com mudanças no projeto.
 
 ---
 
 ## Estado Atual do Projeto
 
-- Web app Next.js 15 rodando em `web/`
+- Web app Next.js 16 (Turbopack) rodando em `web/`
+- **Modo agente ativo**: tools, subagentes paralelos, loop agente
 - 7 skills ativas em `web/src/skills-data/` (copiadas de `skills/` via prebuild)
-- Python CLI agent em `agent/` — early stage, só gera plan JSON ainda
+- Python CLI agent em `agent/` — early stage, só gera plan JSON
+
+## Arquitetura Agente (Web)
+
+- **AI SDK v6** (`ai@6.0.116`) + `@ai-sdk/react` para hooks
+- `streamText` com `stopWhen: stepCountIs(10)` para loop agente
+- `toUIMessageStreamResponse()` para streaming com tool calls visíveis
+- `useChat` do `@ai-sdk/react` com `DefaultChatTransport`
+- **2 tools disponíveis:**
+  - `get_skill_instructions` — carrega instruções de uma skill
+  - `run_skill_subtask` — subagente que executa tarefa com skill específica (paralelo)
+- System prompt inclui contexto da Agio + lista de skills + instruções de uso de tools
 
 ## Arquivos Importantes
 
 | Arquivo | Propósito |
 |---------|-----------|
-| `web/src/app/api/chat/route.ts` | Endpoint de streaming |
+| `web/src/app/api/chat/route.ts` | Endpoint agente: streamText + tools + maxSteps |
+| `web/src/lib/tools.ts` | Skills → tools + subagente pattern |
 | `web/src/lib/skills.ts` | Descoberta de skills |
-| `web/src/lib/prompts.ts` | Construção do system prompt |
+| `web/src/lib/prompts.ts` | System prompt (contexto + skills + instruções agente) |
+| `web/src/components/AgentMessage.tsx` | Renderiza mensagens com tool calls expandíveis |
+| `web/src/components/ChatInterface.tsx` | Chat livre com useChat + AgentMessage |
+| `web/src/components/SkillGrid.tsx` | Painel de skills com useChat + AgentMessage |
 | `web/src/context-docs/agio-contexto.md` | Documento Mestre da Agio |
-| `web/public/logo.png` | Logo da Agio |
-| `web/public/logo-dark.png` | Logo para tema escuro |
+| `web/public/logo.png` | Logo da Agio (tema claro) |
+| `web/public/logo-dark.png` | Logo monograma (tema escuro) |
 | `web/.env.local` | Variáveis de ambiente (não commitado) |
 
 ## Variáveis de Ambiente
 
 - `GOOGLE_GENERATIVE_AI_API_KEY` — Google Gemini (configurado em `web/.env.local`)
+- `ANTHROPIC_API_KEY` — Claude (não configurado ainda)
 
 ## Decisões Tomadas
 
-- Memória migrada para `memory/MEMORY.md` dentro do repositório para sincronização entre máquinas via Git
-- `.env.local` usado para chaves de API (já está no .gitignore)
+- Memória migrada para `memory/MEMORY.md` no repo para sync via Git
+- AI SDK v6: `inputSchema` (não `parameters`), `stopWhen: stepCountIs()` (não `maxSteps`), `toUIMessageStreamResponse()` (não `toDataStreamResponse`)
+- `useChat` do `@ai-sdk/react` com `DefaultChatTransport` (não `api` direto)
 - Dark theme como padrão; accent color `#e83c3c`
+- Logo dark: `logo-dark.png` (monograma negativo)
 
 ## Skills de Marketing — v0.2.0 (Completas)
 
@@ -67,9 +85,12 @@ Todas têm `department: Marketing` no frontmatter. Skills são copiadas via `scr
 
 - Criar 12 skills dos outros departamentos (mesma estrutura v0.2.0)
 - Sincronizar skills em `skills/` (Python agent) com os mesmos corpos v0.2.0
+- Integrar MCP servers (filesystem, browser, APIs externas)
+- Adicionar mais tools (web search, image gen)
+- Testar subagentes paralelos com múltiplas skills
+- Configurar ANTHROPIC_API_KEY para usar Claude models
 - Deploy no Vercel
-- Testar skills no web app com interações reais
 
 ---
 
-_Atualizado em: 2026-03-10_
+_Atualizado em: 2026-03-19_

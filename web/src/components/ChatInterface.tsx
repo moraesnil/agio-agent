@@ -1,88 +1,33 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useModel } from '@/lib/useModel';
-
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-}
+import AgentMessage from './AgentMessage';
 
 export default function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [modelId] = useModel();
+  const [input, setInput] = useState('');
+
+  const transport = useMemo(
+    () => new DefaultChatTransport({ api: '/api/chat', body: { modelId } }),
+    [modelId],
+  );
+
+  const { messages, sendMessage, status, setMessages, error } = useChat({ transport });
+
+  const isLoading = status === 'streaming' || status === 'submitted';
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
+  }, [messages, isLoading]);
 
-  const handleSend = async () => {
-    if (!input.trim() || loading) return;
-
-    const userMessage: Message = { role: 'user', content: input.trim() };
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
+  const handleSend = () => {
+    if (!input.trim() || isLoading) return;
+    sendMessage({ text: input.trim() });
     setInput('');
-    setLoading(true);
-
-    // Placeholder for assistant response
-    const assistantIndex = newMessages.length;
-    setMessages([...newMessages, { role: 'assistant', content: '' }]);
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages, modelId }),
-      });
-
-      if (!res.ok) {
-        const msg = await res.text();
-        setMessages((prev) => {
-          const updated = [...prev];
-          updated[assistantIndex] = { role: 'assistant', content: `[Erro: ${msg}]` };
-          return updated;
-        });
-        return;
-      }
-
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let accumulated = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        accumulated += decoder.decode(value, { stream: true });
-        setMessages((prev) => {
-          const updated = [...prev];
-          updated[assistantIndex] = { role: 'assistant', content: accumulated };
-          return updated;
-        });
-      }
-
-      if (!accumulated) {
-        setMessages((prev) => {
-          const updated = [...prev];
-          updated[assistantIndex] = { role: 'assistant', content: '[Erro: resposta vazia. Verifique a chave de API do modelo selecionado.]' };
-          return updated;
-        });
-      }
-    } catch (err) {
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[assistantIndex] = {
-          role: 'assistant',
-          content: `[Erro: ${err instanceof Error ? err.message : 'Desconhecido'}]`,
-        };
-        return updated;
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -117,7 +62,7 @@ export default function ChatInterface() {
           Chat <span style={{ color: 'var(--accent)', fontStyle: 'italic' }}>Livre</span>
         </h1>
         <p style={{ margin: '6px 0 0', color: 'var(--text-muted)', fontSize: '13px' }}>
-          Conversa livre com o agente — sem skill selecionada, contexto de todas as skills disponível.
+          Conversa livre com o agente — modo agente com tools e subagentes.
         </p>
       </div>
 
@@ -132,13 +77,31 @@ export default function ChatInterface() {
           gap: '16px',
         }}
       >
-        {messages.length === 0 && (
-          <EmptyState />
-        )}
+        {messages.length === 0 && <EmptyState />}
 
         {messages.map((msg, i) => (
-          <MessageBubble key={i} message={msg} isStreaming={loading && i === messages.length - 1 && msg.role === 'assistant' && msg.content === ''} />
+          <AgentMessage
+            key={msg.id}
+            message={msg}
+            isStreaming={isLoading && i === messages.length - 1 && msg.role === 'assistant'}
+          />
         ))}
+
+        {error && (
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              color: '#ef4444',
+              fontFamily: 'IBM Plex Mono, monospace',
+              fontSize: '12px',
+            }}
+          >
+            {error.message}
+          </div>
+        )}
 
         <div ref={bottomRef} />
       </div>
@@ -159,7 +122,7 @@ export default function ChatInterface() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Escreva sua mensagem..."
-            disabled={loading}
+            disabled={isLoading}
             rows={3}
             style={{
               flex: 1,
@@ -172,20 +135,20 @@ export default function ChatInterface() {
               fontSize: '14px',
               lineHeight: 1.5,
               resize: 'none',
-              opacity: loading ? 0.7 : 1,
+              opacity: isLoading ? 0.7 : 1,
             }}
           />
           <button
             onClick={handleSend}
-            disabled={loading || !input.trim()}
+            disabled={isLoading || !input.trim()}
             style={{
-              background: loading || !input.trim() ? 'var(--surface-2)' : 'var(--accent)',
-              color: loading || !input.trim() ? 'var(--text-subtle)' : '#0c0e14',
+              background: isLoading || !input.trim() ? 'var(--surface-2)' : 'var(--accent)',
+              color: isLoading || !input.trim() ? 'var(--text-subtle)' : '#0c0e14',
               border: 'none',
               borderRadius: '8px',
               width: '48px',
               height: '48px',
-              cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+              cursor: isLoading || !input.trim() ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -193,7 +156,7 @@ export default function ChatInterface() {
               transition: 'background 200ms',
             }}
           >
-            {loading ? (
+            {isLoading ? (
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ animation: 'spin 0.8s linear infinite' }}>
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                 <circle cx="8" cy="8" r="6" stroke="var(--text-subtle)" strokeWidth="1.5" />
@@ -209,89 +172,6 @@ export default function ChatInterface() {
         <span style={{ fontSize: '11px', color: 'var(--text-subtle)', fontFamily: 'IBM Plex Mono, monospace' }}>
           Ctrl+Enter para enviar
         </span>
-      </div>
-    </div>
-  );
-}
-
-function MessageBubble({ message, isStreaming }: { message: Message; isStreaming: boolean }) {
-  const isUser = message.role === 'user';
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: isUser ? 'flex-end' : 'flex-start',
-        gap: '4px',
-      }}
-    >
-      <span
-        style={{
-          fontSize: '10px',
-          fontFamily: 'IBM Plex Mono, monospace',
-          color: 'var(--text-subtle)',
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase',
-        }}
-      >
-        {isUser ? 'você' : 'agio agent'}
-      </span>
-
-      <div
-        style={{
-          maxWidth: '85%',
-          background: isUser ? 'var(--accent-dim)' : 'var(--surface)',
-          border: `1px solid ${isUser ? 'var(--accent)' : 'var(--border)'}`,
-          borderRadius: isUser ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
-          padding: '12px 16px',
-        }}
-      >
-        {message.content ? (
-          <pre
-            className={isStreaming ? '' : ''}
-            style={{
-              fontFamily: isUser ? 'DM Sans, sans-serif' : 'IBM Plex Mono, monospace',
-              fontSize: isUser ? '14px' : '13px',
-              lineHeight: isUser ? 1.6 : 1.75,
-              color: 'var(--text)',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              margin: 0,
-            }}
-          >
-            {message.content}
-            {isStreaming && (
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: '8px',
-                  height: '14px',
-                  background: 'var(--accent)',
-                  marginLeft: '2px',
-                  verticalAlign: 'text-bottom',
-                  animation: 'blink 1s step-end infinite',
-                }}
-              />
-            )}
-          </pre>
-        ) : (
-          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', padding: '2px 0' }}>
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: 'var(--accent)',
-                  animation: `bounce 1.2s ease infinite ${i * 0.2}s`,
-                }}
-              />
-            ))}
-            <style>{`@keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }`}</style>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -330,7 +210,7 @@ function EmptyState() {
         </svg>
       </div>
       <p style={{ margin: 0, fontFamily: 'IBM Plex Mono, monospace', fontSize: '12px', color: 'var(--text-muted)' }}>
-        Inicie uma conversa
+        Modo agente ativo — inicie uma conversa
       </p>
     </div>
   );

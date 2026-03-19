@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 import { Skill } from '@/lib/skills';
 import { useModel } from '@/lib/useModel';
 import SkillItem from './SkillCard';
 import TaskInput from './TaskInput';
-import StreamingOutput from './StreamingOutput';
+import AgentMessage from './AgentMessage';
 
 interface SkillGridProps {
   skills: Skill[];
@@ -15,10 +17,21 @@ export default function SkillGrid({ skills }: SkillGridProps) {
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
   const [openDept, setOpenDept] = useState<string | null>(null);
   const [task, setTask] = useState('');
-  const [output, setOutput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [modelId] = useModel();
+  const outputRef = useRef<HTMLDivElement>(null);
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: '/api/chat',
+        body: { modelId, skillName: selectedSkill ?? undefined },
+      }),
+    [modelId, selectedSkill],
+  );
+
+  const { messages, sendMessage, status, setMessages, error } = useChat({ transport });
+
+  const isLoading = status === 'streaming' || status === 'submitted';
 
   // Build ordered departments with their skills
   const deptMap = new Map<string, Skill[]>();
@@ -43,50 +56,25 @@ export default function SkillGrid({ skills }: SkillGridProps) {
 
   const handleSelect = (name: string) => {
     setSelectedSkill(name === selectedSkill ? null : name);
-    // Don't clear output on skill change — let user see previous result
+    setMessages([]);
   };
 
   const handleDeptToggle = (dept: string) => {
     setOpenDept(openDept === dept ? null : dept);
   };
 
-  const handleSubmit = async () => {
-    if (!task.trim() || loading) return;
-    setLoading(true);
-    setOutput('');
-    setError('');
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task: task.trim(), skillName: selectedSkill ?? undefined, modelId }),
-      });
-
-      if (!res.ok) {
-        const msg = await res.text();
-        setError(msg || `Erro ${res.status}`);
-        return;
-      }
-
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let accumulated = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        accumulated += decoder.decode(value, { stream: true });
-        setOutput(accumulated);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
-    } finally {
-      setLoading(false);
-    }
+  const handleSubmit = () => {
+    if (!task.trim() || isLoading) return;
+    sendMessage({ text: task.trim() });
+    setTask('');
   };
 
-  const showOutput = output || loading || error;
+  // Scroll to output when new messages arrive
+  useEffect(() => {
+    if (messages.length > 0) {
+      outputRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '36px 24px' }}>
@@ -218,10 +206,18 @@ export default function SkillGrid({ skills }: SkillGridProps) {
             overflow: 'hidden',
           }}
         >
-          {showOutput ? (
-            /* Streaming output replaces detail panel */
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              <StreamingOutput output={output} loading={loading} error={error} />
+          {messages.length > 0 ? (
+            /* Agent messages replace detail panel */
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {messages
+                .filter((m) => m.role === 'assistant')
+                .map((msg, i, arr) => (
+                  <AgentMessage
+                    key={msg.id}
+                    message={msg}
+                    isStreaming={isLoading && i === arr.length - 1}
+                  />
+                ))}
             </div>
           ) : selectedSkillData ? (
             /* Skill detail */
@@ -380,15 +376,35 @@ export default function SkillGrid({ skills }: SkillGridProps) {
               color: selectedSkillData ? 'var(--accent)' : 'var(--text-subtle)',
             }}
           >
-            {selectedSkillData ? `skill: ${selectedSkillData.name}` : 'modo geral'}
+            {selectedSkillData ? `skill: ${selectedSkillData.name}` : 'modo agente'}
           </span>
+
+          {messages.length > 0 && (
+            <button
+              onClick={() => setMessages([])}
+              style={{
+                marginLeft: 'auto',
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                borderRadius: '5px',
+                padding: '2px 8px',
+                cursor: 'pointer',
+                fontFamily: 'IBM Plex Mono, monospace',
+                fontSize: '10px',
+                color: 'var(--text-muted)',
+                letterSpacing: '0.04em',
+              }}
+            >
+              limpar
+            </button>
+          )}
         </div>
 
         <TaskInput
           value={task}
           onChange={setTask}
           onSubmit={handleSubmit}
-          loading={loading}
+          loading={isLoading}
           label="Descreva sua tarefa"
           placeholder={
             selectedSkillData
@@ -396,6 +412,37 @@ export default function SkillGrid({ skills }: SkillGridProps) {
               : 'Descreva a tarefa em linguagem natural...'
           }
         />
+
+        {/* Agent messages output */}
+        {(messages.length > 0 || error) && (
+          <div ref={outputRef} style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {messages
+              .filter((m) => m.role === 'assistant')
+              .map((msg, i, arr) => (
+                <AgentMessage
+                  key={msg.id}
+                  message={msg}
+                  isStreaming={isLoading && i === arr.length - 1}
+                />
+              ))}
+
+            {error && (
+              <div
+                style={{
+                  background: 'var(--surface)',
+                  border: '1px solid #ef4444',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  color: '#ef4444',
+                  fontFamily: 'IBM Plex Mono, monospace',
+                  fontSize: '12px',
+                }}
+              >
+                {error.message}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
