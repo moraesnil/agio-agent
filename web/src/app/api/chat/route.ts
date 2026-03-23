@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import { streamText, stepCountIs } from 'ai';
+import { streamText, stepCountIs, convertToModelMessages, type UIMessage } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       skillName,
       modelId,
     } = body as {
-      messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
+      messages?: UIMessage[];
       skillName?: string;
       modelId?: string;
     };
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     const result = streamText({
       model,
       system,
-      messages,
+      messages: await convertToModelMessages(messages),
       tools,
       stopWhen: stepCountIs(10),
       maxOutputTokens: 4096,

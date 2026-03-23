@@ -83,6 +83,7 @@ Todas têm `department: Marketing` no frontmatter. Skills são copiadas via `scr
 
 ## Próximos Passos
 
+- **Skill de Dashboard** — gerar dashboards interativos e visualizar inline no web app (pedido pelo usuário em 2026-03-23)
 - Criar 12 skills dos outros departamentos (mesma estrutura v0.2.0)
 - Integrar MCP servers (filesystem, browser, APIs externas)
 - Adicionar mais tools ao web app (web search, image gen)
@@ -99,7 +100,18 @@ A spec em `docs/GIO-spec-tecnica.md` descreve a visão completa. O que falta:
 - Agent loop / multi-turn reasoning — não implementado
 - Supervisor + sub-agentes por departamento — não implementado
 - MCP servers (Sienge, WhatsApp, Calendar) — não iniciado
-- Python agent não carrega context docs da Agio
+- Python agent não carrega context docs da Agio (corrigido em 2026-03-23 — agora carrega)
+
+## Sessão 2026-03-23 — Revisão Geral
+
+- Corrigido sync de skills v0.2.0 para o web app (antes eram placeholders v0.1.0)
+- CLAUDE.md e MEMORY.md atualizados com estado real
+- README.md criado na raiz
+- Python agent melhorado: context docs, validação API key, try/catch, timestamps
+- Web app: gray-matter, LanguageModel type, try/catch na API, fix hydration hooks, fix SkillGrid setTimeout
+- Bug fix: `convertToModelMessages()` na API route — UIMessage vs ModelMessage (AI SDK v6)
+- `.env.example` criado, `.gitignore` atualizado
+- Build e app testados e funcionando (localhost:3000)
 
 ## Memory Files
 
@@ -107,6 +119,7 @@ A spec em `docs/GIO-spec-tecnica.md` descreve a visão completa. O que falta:
 - [feedback_explain_decisions.md](./feedback_explain_decisions.md) — Explicar decisões técnicas de forma clara
 - [project_gio_vision.md](./project_gio_vision.md) — Visão da plataforma GIO multi-agêntica
 - [user_profile.md](./user_profile.md) — Perfil do usuário (não é dev, quer Agent SDK Python)
+- [project_dashboard_skill.md](./project_dashboard_skill.md) — Próxima feature: skill de dashboards com visualização inline
 
 ---
 
