@@ -24,8 +24,9 @@
 .DS_Store
 *.pem
 
-# env files
+# env files (keep .env.example)
 .env*
+!.env.example
 
 # vercel
 .vercel

@@ -1,2 +1,2 @@
-anthropic
-pyyaml
+anthropic>=0.34.0
+pyyaml>=6.0

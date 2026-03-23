@@ -43,14 +43,11 @@ export default function SkillGrid({ skills }: SkillGridProps) {
   const departments = Array.from(deptMap.entries());
 
   // Auto-open first department
-  if (openDept === null && departments.length > 0) {
-    // Use effect-free initialization via lazy check
-    const firstDept = departments[0][0];
-    if (openDept !== firstDept) {
-      // Will be set on first render
-      setTimeout(() => setOpenDept(firstDept), 0);
+  useEffect(() => {
+    if (openDept === null && departments.length > 0) {
+      setOpenDept(departments[0][0]);
     }
-  }
+  }, [departments.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectedSkillData = skills.find((s) => s.name === selectedSkill);
 

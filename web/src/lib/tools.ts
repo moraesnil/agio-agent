@@ -1,13 +1,8 @@
-import { tool, generateText, type ToolSet } from 'ai';
+import { tool, generateText, type ToolSet, type LanguageModel } from 'ai';
 import { z } from 'zod';
 import type { Skill } from './skills';
 
-/**
- * Builds agent tools from discovered skills.
- * Returns undefined if no skills available.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function buildAgentTools(skills: Skill[], model: any): ToolSet | undefined {
+export function buildAgentTools(skills: Skill[], model: LanguageModel): ToolSet | undefined {
   if (skills.length === 0) return undefined;
 
   const skillNames = skills.map((s) => s.name) as [string, ...string[]];

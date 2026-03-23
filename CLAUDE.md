@@ -17,8 +17,8 @@ Incluir: novos arquivos, decisões tomadas, skills adicionadas, departamentos, e
 ## Project Overview
 
 **Agio Agent** is a skills-based marketing automation platform for Agio Engenharia, consisting of:
-- A **Next.js 15 web app** (`/web`) — the primary interface used daily
-- A **Python CLI agent** (`/agent`) — early-stage, for batch automation tasks
+- A **Next.js 16 web app** (`/web`) — the primary interface used daily
+- A **Python CLI agent** (`/agent`) — streaming single-turn agent with skill injection
 
 GitHub: https://github.com/moraesnil/agio-agent
 
@@ -36,7 +36,7 @@ npm run build     # production build
 
 ### Stack
 
-- Next.js 15 (App Router)
+- Next.js 16 (App Router, Turbopack)
 - TypeScript
 - Tailwind CSS v4
 - Vercel AI SDK (`ai` package) for streaming
@@ -125,22 +125,31 @@ pip install anthropic pyyaml
 
 ### Architecture
 
-Skills for the Python agent live in `skills/<folder-name>/SKILL.md` (separate from the web app's `web/src/skills-data/`).
+Skills live in `skills/<folder-name>/SKILL.md` at the root. The web app copies them via `web/scripts/copy-skills.js` (runs automatically on `npm run dev` and `npm run build`).
 
-**Current state:** Early development. `agent.py` only builds a plan JSON — it does not yet execute Claude API calls or invoke skills.
+**Current state:** Functional single-turn agent. Streams Claude API responses with skill context injected in the system prompt. Does NOT have tools, agent loops, or multi-turn reasoning yet.
 
 **Config:** `agent/config.yaml` — model defaults and directory paths. CLI args override.
 
 **Output:** `./output/raw/` by default. `./logs/` reserved for future logging.
 
+### What's NOT built yet (vs. GIO spec)
+
+The `docs/GIO-spec-tecnica.md` describes the full vision. Key gaps:
+- No tools (search_index, read_file, notion_search, etc.)
+- No agent loop or multi-turn reasoning
+- No supervisor/sub-agent pattern
+- No backend server (FastAPI)
+- No MCP servers (Sienge, WhatsApp, Calendar)
+- Agent doesn't load Agio context docs (web app does)
+
 ---
 
-## Adding a New Skill (Web)
+## Adding a New Skill
 
-1. Create `web/src/skills-data/<skill-name>/SKILL.md`
+1. Create `skills/<skill-name>/SKILL.md` at the **root** (source of truth)
 2. Add YAML frontmatter with `name`, `department`, `description`, `metadata`
-3. Skill appears automatically on next page load
+3. Run `npm run dev` or `npm run build` in `/web` — the prebuild script copies skills automatically
+4. Skill appears in both the web app and Python agent
 
-## Adding a New Skill (Python Agent)
-
-Create `skills/<skill-name>/SKILL.md` with the same frontmatter structure.
+**Important:** Never edit skills directly in `web/src/skills-data/` — they get overwritten by the prebuild copy.

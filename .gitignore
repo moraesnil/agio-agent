@@ -26,4 +26,8 @@ web/.claude/settings.local.json
 # Python
 __pycache__/
 *.pyc
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
 output/raw/

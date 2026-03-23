@@ -9,7 +9,7 @@ Arquivo de memória compartilhada entre máquinas via Git.
 - Web app Next.js 16 (Turbopack) rodando em `web/`
 - **Modo agente ativo**: tools, subagentes paralelos, loop agente
 - 7 skills ativas em `web/src/skills-data/` (copiadas de `skills/` via prebuild)
-- Python CLI agent em `agent/` — early stage, só gera plan JSON
+- Python CLI agent em `agent/` — funcional, faz streaming com Claude API (single-turn, sem tools/loops)
 
 ## Arquitetura Agente (Web)
 
@@ -84,13 +84,30 @@ Todas têm `department: Marketing` no frontmatter. Skills são copiadas via `scr
 ## Próximos Passos
 
 - Criar 12 skills dos outros departamentos (mesma estrutura v0.2.0)
-- Sincronizar skills em `skills/` (Python agent) com os mesmos corpos v0.2.0
 - Integrar MCP servers (filesystem, browser, APIs externas)
-- Adicionar mais tools (web search, image gen)
-- Testar subagentes paralelos com múltiplas skills
+- Adicionar mais tools ao web app (web search, image gen)
+- Implementar tools no Python agent (hoje não tem nenhuma)
+- Evoluir Python agent para multi-turn com agent loop
 - Configurar ANTHROPIC_API_KEY para usar Claude models
 - Deploy no Vercel
 
+## Gaps entre Estado Atual e Spec GIO
+
+A spec em `docs/GIO-spec-tecnica.md` descreve a visão completa. O que falta:
+- Tools (search_index, read_file, notion_search, etc.) — zero implementadas
+- Backend FastAPI — não existe
+- Agent loop / multi-turn reasoning — não implementado
+- Supervisor + sub-agentes por departamento — não implementado
+- MCP servers (Sienge, WhatsApp, Calendar) — não iniciado
+- Python agent não carrega context docs da Agio
+
+## Memory Files
+
+- [feedback_use_skills.md](./feedback_use_skills.md) — Sempre usar skills instaladas do Claude Code quando aplicável
+- [feedback_explain_decisions.md](./feedback_explain_decisions.md) — Explicar decisões técnicas de forma clara
+- [project_gio_vision.md](./project_gio_vision.md) — Visão da plataforma GIO multi-agêntica
+- [user_profile.md](./user_profile.md) — Perfil do usuário (não é dev, quer Agent SDK Python)
+
 ---
 
-_Atualizado em: 2026-03-19_
+_Atualizado em: 2026-03-23_
